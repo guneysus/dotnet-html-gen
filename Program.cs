@@ -16,17 +16,29 @@ namespace html_gen
                 head(
                     title("Lorem ipsum di amet.")
                 ),
-                tag("body", tag("div", tag("p", text("hello world..."))))
+                tag("body",
+                    tag(
+                        "div",
+                            tag("p", text("#1")),
+                            tag("p", text("#2"))
+                    )
+                )
             );
 
-            WriteLine(doc().html());
+            // WriteLine(doc().html());
+
+            WriteLine(document(
+                // tag("body", text("lorem ipsum di amet")),
+                body(
+                    text("lorem ipsum di amet")
+                )
+            )().html());
         }
     }
 }
 
 public abstract class HtmlElement
 {
-
     public virtual string html()
     {
         if (SelfClosing) return $"<{Tag}/>";
@@ -85,12 +97,30 @@ public class HtmlTag : HtmlElement
 {
     public override string Tag { get; }
 
-    public HtmlTag(string tag, Func<HtmlElement> child) { 
+    public HtmlTag(string tag, Func<HtmlElement> child) : this(child)
+    {
         Tag = tag;
-        Children.Add(child);
     }
 
-    HtmlTag () {}
+    HtmlTag() { }
+    protected HtmlTag(Func<HtmlElement> child) => Children.Add(child);
+
+    public HtmlTag(string tag, Func<HtmlElement>[] children)
+    {
+        Tag = tag;
+        Children.AddRange(children);
+    }
+}
+
+public class Body : HtmlTag
+{
+    public Body(Func<HtmlElement> child) : base("body", child)
+    {
+    }
+
+    public Body(Func<HtmlElement>[] children) : base("body", children)
+    {
+    }    
 }
 
 public class HtmlText : HtmlElement
@@ -107,10 +137,7 @@ public class HtmlText : HtmlElement
 
 public class Title : HtmlTag
 {
-    public Title(Func<HtmlText> child) : base("title", child)
-    {
-        this.Children.Add(child);
-    }
+    public Title(Func<HtmlText> child) : base("title", child) {}
 }
 
 public static class html
@@ -124,14 +151,22 @@ public static class html
     public static Func<HtmlDocument> document(params Func<HtmlElement>[] children)
     {
         return () => new HtmlDocument(children);
-    }    
+    }
 
     public static Func<Head> head() => () => new Head();
     public static Func<Head> head(Func<HtmlElement> child) => () => new Head(child);
 
     public static Func<Title> title() => () => new Title(() => new HtmlText(string.Empty));
     public static Func<Title> title(string title) => () => new Title(() => new HtmlText(title));
-    public static Func<Title> text(string text) => () => new Title(() => new HtmlText(text));
+    public static Func<HtmlText> text(string text) => () => new HtmlText(text);
 
     public static Func<HtmlTag> tag(string tag, Func<HtmlElement> child) => () => new HtmlTag(tag, child);
+    public static Func<HtmlTag> tag(string tag, params Func<HtmlElement>[] children) => () =>
+    {
+        return new HtmlTag(tag, children);
+    };
+
+    public static Func<Body> body(params Func<HtmlElement>[] children){
+        return () => new Body(children);
+    }
 }
